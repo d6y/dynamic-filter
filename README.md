@@ -1,4 +1,4 @@
-# Example of dynamic filtering with Slick where the type of comparison is itself dynamic.
+# Example of dynamic filtering with Slick where the type of comparison is itself dynamic
 
 The idea is that a comparison can be applied to a query, column, and value providing there is a way to do the comparison for the type of the value.
 
@@ -29,4 +29,11 @@ Run the example code with:
 ```
 sbt run
 ```
+
+## To do
+
+- can we get this to automatically work for `Option[T]` as well as `T`? E.g., just have one "where builder" for `T`, not duplicate it for `Option[T]`?
+- ...
+
+
 
