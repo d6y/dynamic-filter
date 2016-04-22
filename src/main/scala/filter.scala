@@ -29,8 +29,8 @@ object Filters {
   // in this example, where None indicates we don't allow that kind of 
   // comparison.
   //
-  sealed trait WhereBuilder[T,R] {
-    def apply[M,U,C[_]](column: M => Rep[T], cmp: Comparison, v: R, q: Query[M,U,C]): Option[Query[M,U,C]]
+  sealed trait WhereBuilder[R,T] {
+    def apply[M,U,C[_]](column: M => Rep[R], cmp: Comparison, v: T, q: Query[M,U,C]): Option[Query[M,U,C]]
   }
 
   implicit object WhereLong extends WhereBuilder[Long,Long] {
