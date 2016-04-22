@@ -43,7 +43,7 @@ object Example extends App {
   // The types of comparison we support:
   //
   sealed trait Comparison {
-    def filter[M,U,C[_],T](v: T, q: Query[M,U,C])(column: M => Rep[T])(implicit where: WhereBuilder[T]): Option[Query[M,U,C]] = 
+    def filter[M,U,C[_],T,R](v: T, q: Query[M,U,C])(column: M => Rep[R])(implicit where: WhereBuilder[R,T]): Option[Query[M,U,C]] = 
       where(column, this, v, q)
   }
   case object EQ   extends Comparison
@@ -53,17 +53,17 @@ object Example extends App {
   case object GT   extends Comparison
   case object GTEQ extends Comparison
   case object LIKE extends Comparison
+  case object IN   extends Comparison
 
-  // TODO: IN
 
   //
   // For a given type, T, how we apply a comparison for that type:
   //
-  sealed trait WhereBuilder[T] {
-    def apply[M,U,C[_]](column: M => Rep[T], cmp: Comparison, v: T, q: Query[M,U,C]): Option[Query[M,U,C]]
+  sealed trait WhereBuilder[T,R] {
+    def apply[M,U,C[_]](column: M => Rep[T], cmp: Comparison, v: R, q: Query[M,U,C]): Option[Query[M,U,C]]
   }
 
-  implicit object WhereLong extends WhereBuilder[Long] {
+  implicit object WhereLong extends WhereBuilder[Long,Long] {
     def apply[M,U,C[_]](column: M => Rep[Long], cmp: Comparison, v: Long, q: Query[M,U,C]): Option[Query[M,U,C]] =
       cmp match {
         case EQ   => Some(q.filter(t => column(t) === v))
@@ -72,11 +72,20 @@ object Example extends App {
         case LT   => Some(q.filter(t => column(t)  <  v))
         case GTEQ => Some(q.filter(t => column(t)  >= v))
         case GT   => Some(q.filter(t => column(t)  >  v))
+        case IN   => None
         case LIKE => None
       }
   }
+
+  implicit object WhereLongSeq extends WhereBuilder[Long, List[Long]] {
+    def apply[M,U,C[_]](column: M => Rep[Long], cmp: Comparison, vs: List[Long], q: Query[M,U,C]): Option[Query[M,U,C]] =
+      cmp match {
+        case IN => Some(q.filter(t => column(t) inSetBind vs))
+        case _  => None
+      }
+  }
     
-  implicit object WhereString extends WhereBuilder[String] {
+  implicit object WhereString extends WhereBuilder[String, String] {
     def apply[M,U,C[_]](column: M => Rep[String], cmp: Comparison, v: String, q: Query[M,U,C]): Option[Query[M,U,C]] =
       cmp match {
         case EQ   => Some(q.filter(t => column(t) === v))
@@ -86,6 +95,7 @@ object Example extends App {
         case GTEQ => Some(q.filter(t => column(t)  >= v))
         case GT   => Some(q.filter(t => column(t)  >  v))
         case LIKE => Some(q.filter(t => column(t) like v))
+        case IN   => None
     }
   }
 
@@ -102,8 +112,9 @@ object Example extends App {
   val query1 = cmp.filter(value, messages)(_.id)        // ok
   val query2 = LIKE.filter(value, messages)(_.id)       // not valid (LIKE on a LONG)
   val query3 = LIKE.filter("Dave%", messages)(_.sender) // ok
+  val query4 = IN.filter(List(1L, 3L), messages)(_.id)  // ok 
 
-  query2 match {
+  query4 match {
     case Some(q) =>
       println(s"Query: ${q.result.statements.mkString}")
       println(exec(q.result))
