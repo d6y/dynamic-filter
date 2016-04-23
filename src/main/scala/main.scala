@@ -13,14 +13,15 @@ object Example extends App {
 
   final case class Message(
     sender:  String,
-    content: String,
+    content: Option[String],
     id:      Long = 0L)
 
   def freshTestData = Seq(
-    Message("Dave", "Hello, HAL. Do you read me, HAL?"),
-    Message("HAL",  "Affirmative, Dave. I read you."),
-    Message("Dave", "Open the pod bay doors, HAL."),
-    Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
+    Message("Dave", Some("Hello, HAL. Do you read me, HAL?")),
+    Message("HAL",  Some("Affirmative, Dave. I read you.")),
+    Message("Dave", Some("Open the pod bay doors, HAL.")),
+    Message("HAL",  Some("I'm sorry, Dave. I'm afraid I can't do that.")),
+    Message("Dave", None)
   )
 
   final class MessageTable(tag: Tag)
@@ -28,7 +29,7 @@ object Example extends App {
 
     def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def sender  = column[String]("sender")
-    def content = column[String]("content")
+    def content = column[Option[String]]("content")
 
     def * = (sender, content, id) <> (Message.tupled, Message.unapply)
   }
@@ -55,6 +56,7 @@ object Example extends App {
   val query2 = LIKE.filter(value, messages)(_.id)       // None (LIKE on a LONG not supported)
   val query3 = LIKE.filter("Dave%", messages)(_.sender) // ok
   val query4 = IN.filter(List(1L, 3L), messages)(_.id)  // ok 
+  val query5 = LIKE.filter("Affirmative%", messages)(_.content) // ok
 
   query4 match {
     case Some(q) =>
